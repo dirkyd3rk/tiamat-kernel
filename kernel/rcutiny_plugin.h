@@ -857,27 +857,7 @@ void exit_rcu(void)
 
 #else /* #ifdef CONFIG_TINY_PREEMPT_RCU */
 
-#ifdef CONFIG_RCU_TRACE
-
-/*
- * Because preemptible RCU does not exist, it is not necessary to
- * dump out its statistics.
- */
-static void show_tiny_preempt_stats(struct seq_file *m)
-{
-}
-
-#endif /* #ifdef CONFIG_RCU_TRACE */
-
-/*
- * Because preemptible RCU does not exist, it is never necessary to
- * boost preempted RCU readers.
- */
-static int rcu_boost(void)
-{
-	return 0;
-}
-
+#ifndef CONFIG_CLASSIC_RCU
 /*
  * Because preemptible RCU does not exist, it never has any callbacks
  * to check.
@@ -901,6 +881,7 @@ static void rcu_preempt_remove_callbacks(struct rcu_ctrlblk *rcp)
 static void rcu_preempt_process_callbacks(void)
 {
 }
+#endif /* CONFIG_CLASSIC_RCU */
 
 #endif /* #else #ifdef CONFIG_TINY_PREEMPT_RCU */
 
