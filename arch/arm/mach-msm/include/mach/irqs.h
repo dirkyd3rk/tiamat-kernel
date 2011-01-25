@@ -36,6 +36,14 @@
 #error "Unknown architecture specification"
 #endif
 
+#if defined(CONFIG_MACH_BRAVO) || defined(CONFIG_MACH_BRAVOC) || defined(CONFIG_MACH_SUPERSONIC)
+#define NR_IRQS (NR_MSM_IRQS + NR_SIRC_IRQS + NR_GPIO_IRQS + NR_BOARD_IRQS \
+                + NR_MICROP_IRQS)
+#define MSM_INT_TO_GPIO(n) ((n) - NR_MSM_IRQS)
+#define MSM_uP_TO_INT(n) (FIRST_MICROP_IRQ + (n))
+#define MSM_INT_TO_GPIO(n) ((n) - NR_MSM_IRQS)
+#define MSM_uP_TO_INT(n) (FIRST_MICROP_IRQ + (n))
+#else
 #define NR_IRQS (NR_MSM_IRQS + NR_SIRC_IRQS + NR_GPIO_IRQS + NR_BOARD_IRQS)
 #define MSM_GPIO_TO_INT(n) (FIRST_GPIO_IRQ + (n))
 #define MSM_INT_TO_REG(base, irq) (base + irq / 32)
