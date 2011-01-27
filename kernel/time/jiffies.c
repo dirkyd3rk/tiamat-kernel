@@ -24,6 +24,8 @@
 #include <linux/jiffies.h>
 #include <linux/init.h>
 
+#include "tick-internal.h"
+
 /* The Jiffies based clocksource is the lowest common
  * denominator clock source which should function on
  * all systems. It has the same coarse resolution as
