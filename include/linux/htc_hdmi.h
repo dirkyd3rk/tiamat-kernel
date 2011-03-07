@@ -33,6 +33,9 @@ enum {
 #define HDMI_ESTABLISH_TIMING	_IOR(HDMI_IOCTL_MAGIC, 8, unsigned)
 #define HDMI_GET_EDID		_IOR(HDMI_IOCTL_MAGIC, 9, unsigned)
 #define HDMI_GET_DISPLAY_INFO	_IOR(HDMI_IOCTL_MAGIC, 10, unsigned)
+#define HDMI_GET_STATISTICS     _IOR(HDMI_IOCTL_MAGIC, 20, unsigned)
+#define HDMI_GET_PANEL_STATE    _IOW(HDMI_IOCTL_MAGIC, 21, unsigned)
+#define HDMI_SET_PANEL_STATE    _IOW(HDMI_IOCTL_MAGIC, 22, unsigned)
 
 #define ASPECT(w, h)            (w << 8 | h)
 struct video_mode {
@@ -51,6 +54,21 @@ struct display_info {
 	unsigned int	visible_height;	
 	unsigned int	resolution_width;	/* in pixel */
 	unsigned int	resolution_height;
+};
+
+/* Gathered statistics for mirroring */
+struct mirror_statistics {
+    unsigned int    droppedPanelFrames;     /* Number of pan_update requests to panel we dropped */
+    unsigned int    panelFramesRequested;   /* Number of panel frames requested */
+    unsigned int    blitsCompleted;         /* Number of completed blits */
+    s64             statisticsTime;         /* Mirror time, in ns */
+};
+
+/* Panel state while mirroring */
+enum {
+    PANEL_FULL = 0, 
+    PANEL_REDUCED, 
+    PANEL_OFF
 };
 
 #endif
