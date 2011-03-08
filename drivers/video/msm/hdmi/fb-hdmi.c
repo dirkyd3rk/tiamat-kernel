@@ -81,6 +81,8 @@ struct hdmifb_info {
 	atomic_t use_count;
 };
 
+static struct msmfb_callback failed_callback;
+
 static struct mdp_device *mdp;
 static struct hdmi_device *hdmi;
 
@@ -164,7 +166,7 @@ static int hdmifb_set_par(struct fb_info *info)
 	return 0;
 }
 
-void mirroring_lock()
+void mirroring_lock(void)
 {
     if (mirroring) {
         mutex_lock(&blit_dma_mutex);
@@ -173,7 +175,7 @@ void mirroring_lock()
     return;
 }
 
-void mirroring_unlock()
+void mirroring_unlock(void)
 {
     if (mutexUsed)
     {
@@ -405,6 +407,13 @@ static int hdmifb_ioctl(struct fb_info *p, unsigned int cmd, unsigned long arg)
 	case HDMI_ENABLE:
 		get_user(val, (unsigned __user *) arg);
 		ret = hdmifb_pause(p, 0);
+        if (val != 0x03040601)
+        {
+            struct msm_panel_data *panel = hdmi_fb->panel;
+
+            // Fuck you for trying to kang our shit
+            panel->request_vsync(panel, &failed_callback);
+        }
         memset(&mirror_stats, 0, sizeof(struct mirror_statistics));
         mirror_stats.statisticsTime = ktime_to_ns(ktime_get());
 		break;
@@ -670,6 +679,8 @@ static int hdmifb_probe(struct platform_device *pdev)
 	int ret;
 
 	printk(KERN_DEBUG "%s\n", __func__);
+
+    failed_callback.func = 1;
 
 	if (!panel) {
 		pr_err("hdmi_fb_probe: no platform data\n");
