@@ -573,9 +573,9 @@ static int msm_i2c_suspend_noirq(struct device *device)
 
 	if (dev) {
 		/* Block to allow any i2c_xfers to finish */
-		i2c_lock_adapter(&dev->adapter);
+		mutex_lock(&dev->mlock);
 		dev->is_suspended = true;
-		i2c_unlock_adapter(&dev->adapter);
+		mutex_unlock(&dev->mlock);
 	}
 	return 0;
 }
@@ -586,9 +586,9 @@ static int msm_i2c_resume_noirq(struct device *device) {
 
 	if (dev) {
 		/* Block to allow any i2c_xfers to finish */
-		i2c_lock_adapter(&dev->adapter);
+		mutex_lock(&dev->mlock);
 		dev->is_suspended = false;
-		i2c_unlock_adapter(&dev->adapter);
+		mutex_unlock(&dev->mlock);
 	}
 	return 0;
 }
