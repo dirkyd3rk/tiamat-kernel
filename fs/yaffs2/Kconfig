@@ -1,161 +1,259 @@
 #
-# YAFFS file system configurations
+# File system configuration
 #
 
-config YAFFS_FS
-	tristate "YAFFS2 file system support"
-	default n
-	depends on MTD_BLOCK
-	select YAFFS_YAFFS1
-	select YAFFS_YAFFS2
-	help
-	  YAFFS2, or Yet Another Flash Filing System, is a filing system
-	  optimised for NAND Flash chips.
+menu "File systems"
 
-	  To compile the YAFFS2 file system support as a module, choose M
-	  here: the module will be called yaffs2.
+if BLOCK
 
-	  If unsure, say N.
+source "fs/ext2/Kconfig"
+source "fs/ext3/Kconfig"
+source "fs/ext4/Kconfig"
 
-	  Further information on YAFFS2 is available at
-	  <http://www.aleph1.co.uk/yaffs/>.
+config FS_XIP
+# execute in place
+	bool
+	depends on EXT2_FS_XIP
+	default y
 
-config YAFFS_YAFFS1
-	bool "512 byte / page devices"
-	depends on YAFFS_FS
+source "fs/jbd/Kconfig"
+source "fs/jbd2/Kconfig"
+
+config FS_MBCACHE
+# Meta block cache for Extended Attributes (ext2/ext3/ext4)
+	tristate
+	default y if EXT2_FS=y && EXT2_FS_XATTR
+	default y if EXT3_FS=y && EXT3_FS_XATTR
+	default y if EXT4_FS=y && EXT4_FS_XATTR
+	default m if EXT2_FS_XATTR || EXT3_FS_XATTR || EXT4_FS_XATTR
+
+source "fs/reiserfs/Kconfig"
+source "fs/jfs/Kconfig"
+
+source "fs/xfs/Kconfig"
+source "fs/gfs2/Kconfig"
+source "fs/ocfs2/Kconfig"
+source "fs/btrfs/Kconfig"
+source "fs/nilfs2/Kconfig"
+
+endif # BLOCK
+
+# Posix ACL utility routines
+#
+# Note: Posix ACLs can be implemented without these helpers.  Never use
+# this symbol for ifdefs in core code.
+#
+config FS_POSIX_ACL
+	def_bool n
+
+config EXPORTFS
+	tristate
+
+config FILE_LOCKING
+	bool "Enable POSIX file locking API" if EXPERT
 	default y
 	help
-	  Enable YAFFS1 support -- yaffs for 512 byte / page devices
+	  This option enables standard file locking support, required
+          for filesystems like NFS and for the flock() system
+          call. Disabling this option saves about 11k.
 
-	  Not needed for 2K-page devices.
+source "fs/notify/Kconfig"
 
-	  If unsure, say Y.
+source "fs/quota/Kconfig"
 
-config YAFFS_9BYTE_TAGS
-	bool "Use older-style on-NAND data format with pageStatus byte"
-	depends on YAFFS_YAFFS1
-	default n
+source "fs/autofs4/Kconfig"
+source "fs/fuse/Kconfig"
+
+config CUSE
+	tristate "Character device in Userspace support"
+	depends on FUSE_FS
 	help
+	  This FUSE extension allows character devices to be
+	  implemented in userspace.
 
-	  Older-style on-NAND data format has a "pageStatus" byte to record
-	  chunk/page state.  This byte is zero when the page is discarded.
-	  Choose this option if you have existing on-NAND data using this
-	  format that you need to continue to support.  New data written
-	  also uses the older-style format.  Note: Use of this option
-	  generally requires that MTD's oob layout be adjusted to use the
-	  older-style format.  See notes on tags formats and MTD versions
-	  in yaffs_mtdif1.c.
+	  If you want to develop or use userspace character device
+	  based on CUSE, answer Y or M.
+
+config GENERIC_ACL
+	bool
+	select FS_POSIX_ACL
+
+menu "Caches"
+
+source "fs/fscache/Kconfig"
+source "fs/cachefiles/Kconfig"
+
+endmenu
+
+if BLOCK
+menu "CD-ROM/DVD Filesystems"
+
+source "fs/isofs/Kconfig"
+source "fs/udf/Kconfig"
+
+endmenu
+endif # BLOCK
+
+if BLOCK
+menu "DOS/FAT/NT Filesystems"
+
+source "fs/fat/Kconfig"
+source "fs/ntfs/Kconfig"
+
+endmenu
+endif # BLOCK
+
+menu "Pseudo filesystems"
+
+source "fs/proc/Kconfig"
+source "fs/sysfs/Kconfig"
+
+config TMPFS
+	bool "Virtual memory file system support (former shm fs)"
+	depends on SHMEM
+	help
+	  Tmpfs is a file system which keeps all files in virtual memory.
+
+	  Everything in tmpfs is temporary in the sense that no files will be
+	  created on your hard drive. The files live in memory and swap
+	  space. If you unmount a tmpfs instance, everything stored therein is
+	  lost.
+
+	  See <file:Documentation/filesystems/tmpfs.txt> for details.
+
+config TMPFS_POSIX_ACL
+	bool "Tmpfs POSIX Access Control Lists"
+	depends on TMPFS
+	select GENERIC_ACL
+	help
+	  POSIX Access Control Lists (ACLs) support permissions for users and
+	  groups beyond the owner/group/world scheme.
+
+	  To learn more about Access Control Lists, visit the POSIX ACLs for
+	  Linux website <http://acl.bestbits.at/>.
+
+	  If you don't know what Access Control Lists are, say N.
+
+config HUGETLBFS
+	bool "HugeTLB file system support"
+	depends on X86 || IA64 || SPARC64 || (S390 && 64BIT) || \
+		   SYS_SUPPORTS_HUGETLBFS || BROKEN
+	help
+	  hugetlbfs is a filesystem backing for HugeTLB pages, based on
+	  ramfs. For architectures that support it, say Y here and read
+	  <file:Documentation/vm/hugetlbpage.txt> for details.
 
 	  If unsure, say N.
 
-config YAFFS_DOES_ECC
-	bool "Lets Yaffs do its own ECC"
-	depends on YAFFS_FS && YAFFS_YAFFS1 && !YAFFS_9BYTE_TAGS
-	default n
-	help
-	  This enables Yaffs to use its own ECC functions instead of using
-	  the ones from the generic MTD-NAND driver.
+config HUGETLB_PAGE
+	def_bool HUGETLBFS
 
-	  If unsure, say N.
+source "fs/configfs/Kconfig"
 
-config YAFFS_ECC_WRONG_ORDER
-	bool "Use the same ecc byte order as Steven Hill's nand_ecc.c"
-	depends on YAFFS_FS && YAFFS_DOES_ECC && !YAFFS_9BYTE_TAGS
-	default n
-	help
-	  This makes yaffs_ecc.c use the same ecc byte order as Steven
-	  Hill's nand_ecc.c. If not set, then you get the same ecc byte
-	  order as SmartMedia.
+endmenu
 
-	  If unsure, say N.
-
-config YAFFS_YAFFS2
-	bool "2048 byte (or larger) / page devices"
-	depends on YAFFS_FS
+menuconfig MISC_FILESYSTEMS
+	bool "Miscellaneous filesystems"
 	default y
-	help
-	  Enable YAFFS2 support -- yaffs for >= 2K bytes per page devices
+	---help---
+	  Say Y here to get to see options for various miscellaneous
+	  filesystems, such as filesystems that came from other
+	  operating systems.
 
-	  If unsure, say Y.
+	  This option alone does not add any kernel code.
 
-config YAFFS_AUTO_YAFFS2
-	bool "Autoselect yaffs2 format"
-	depends on YAFFS_YAFFS2
+	  If you say N, all options in this submenu will be skipped and
+	  disabled; if unsure, say Y here.
+
+if MISC_FILESYSTEMS
+
+source "fs/adfs/Kconfig"
+source "fs/affs/Kconfig"
+source "fs/ecryptfs/Kconfig"
+source "fs/hfs/Kconfig"
+source "fs/hfsplus/Kconfig"
+source "fs/befs/Kconfig"
+source "fs/bfs/Kconfig"
+source "fs/efs/Kconfig"
+
+# Patched by YAFFS
+source "fs/yaffs2/Kconfig"
+
+source "fs/jffs2/Kconfig"
+# UBIFS File system configuration
+source "fs/ubifs/Kconfig"
+source "fs/logfs/Kconfig"
+source "fs/cramfs/Kconfig"
+source "fs/squashfs/Kconfig"
+source "fs/freevxfs/Kconfig"
+source "fs/minix/Kconfig"
+source "fs/omfs/Kconfig"
+source "fs/hpfs/Kconfig"
+source "fs/qnx4/Kconfig"
+source "fs/romfs/Kconfig"
+source "fs/sysv/Kconfig"
+source "fs/ufs/Kconfig"
+source "fs/exofs/Kconfig"
+
+endif # MISC_FILESYSTEMS
+
+menuconfig NETWORK_FILESYSTEMS
+	bool "Network File Systems"
 	default y
-	help
-	  Without this, you need to explicitely use yaffs2 as the file
-	  system type. With this, you can say "yaffs" and yaffs or yaffs2
-	  will be used depending on the device page size (yaffs on
-	  512-byte page devices, yaffs2 on 2K page devices).
+	depends on NET
+	---help---
+	  Say Y here to get to see options for network filesystems and
+	  filesystem-related networking code, such as NFS daemon and
+	  RPCSEC security modules.
 
-	  If unsure, say Y.
+	  This option alone does not add any kernel code.
 
-config YAFFS_DISABLE_TAGS_ECC
-	bool "Disable YAFFS from doing ECC on tags by default"
-	depends on YAFFS_FS && YAFFS_YAFFS2
-	default n
-	help
-	  This defaults Yaffs to using its own ECC calculations on tags instead of
-	  just relying on the MTD.
-	  This behavior can also be overridden with tags_ecc_on and
-	  tags_ecc_off mount options.
+	  If you say N, all options in this submenu will be skipped and
+	  disabled; if unsure, say Y here.
 
-	  If unsure, say N.
+if NETWORK_FILESYSTEMS
 
-config YAFFS_ALWAYS_CHECK_CHUNK_ERASED
-	bool "Force chunk erase check"
-	depends on YAFFS_FS
-	default n
-	help
-          Normally YAFFS only checks chunks before writing until an erased
-	  chunk is found. This helps to detect any partially written
-	  chunks that might have happened due to power loss.
+source "fs/nfs/Kconfig"
+source "fs/nfsd/Kconfig"
 
-	  Enabling this forces on the test that chunks are erased in flash
-	  before writing to them. This takes more time but is potentially
-	  a bit more secure.
+config LOCKD
+	tristate
+	depends on FILE_LOCKING
 
-	  Suggest setting Y during development and ironing out driver
-	  issues etc. Suggest setting to N if you want faster writing.
-
-	  If unsure, say Y.
-
-config YAFFS_EMPTY_LOST_AND_FOUND
-	bool "Empty lost and found on boot"
-	depends on YAFFS_FS
-	default n
-	help
-	  If this is enabled then the contents of lost and found is
-	  automatically dumped at mount.
-
-	  If unsure, say N.
-
-config YAFFS_DISABLE_BLOCK_REFRESHING
-	bool "Disable yaffs2 block refreshing"
-	depends on YAFFS_FS
-	default n
-	help
-	 If this is set, then block refreshing is disabled.
-	 Block refreshing infrequently refreshes the oldest block in
-	 a yaffs2 file system. This mechanism helps to refresh flash to
-	 mitigate against data loss. This is particularly useful for MLC.
-
-	  If unsure, say N.
-
-config YAFFS_DISABLE_BACKGROUND
-	bool "Disable yaffs2 background processing"
-	depends on YAFFS_FS
-	default n
-	help
-	 If this is set, then background processing is disabled.
-	 Background processing makes many foreground activities faster.
-
-	 If unsure, say N.
-
-config YAFFS_XATTR
-	bool "Enable yaffs2 xattr support"
-	depends on YAFFS_FS
+config LOCKD_V4
+	bool
+	depends on NFSD_V3 || NFS_V3
+	depends on FILE_LOCKING
 	default y
-	help
-	 If this is set then yaffs2 will provide xattr support.
-	 If unsure, say Y.
+
+config NFS_ACL_SUPPORT
+	tristate
+	select FS_POSIX_ACL
+
+config NFS_COMMON
+	bool
+	depends on NFSD || NFS_FS
+	default y
+
+source "net/sunrpc/Kconfig"
+source "fs/ceph/Kconfig"
+source "fs/cifs/Kconfig"
+source "fs/ncpfs/Kconfig"
+source "fs/coda/Kconfig"
+source "fs/afs/Kconfig"
+source "fs/9p/Kconfig"
+
+endif # NETWORK_FILESYSTEMS
+
+if BLOCK
+menu "Partition Types"
+
+source "fs/partitions/Kconfig"
+
+endmenu
+endif
+
+source "fs/nls/Kconfig"
+source "fs/dlm/Kconfig"
+
+endmenu
