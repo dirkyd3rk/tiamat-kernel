@@ -32,6 +32,7 @@
 #include "dal_acdb.h"
 #include "dal_adie.h"
 #include <mach/msm_qdsp6_audio.h>
+#include <mach/htc_acoustic_qsd.h>
 
 #include <linux/gpio.h>
 
@@ -45,28 +46,28 @@
 
 static struct q6_hw_info q6_audio_hw[Q6_HW_COUNT] = {
 	[Q6_HW_HANDSET] = {
-		.min_gain = -2000,
-		.max_gain = 0,
+		.min_gain = -1500,
+		.max_gain = 1100,
 	},
 	[Q6_HW_HEADSET] = {
-		.min_gain = -2000,
-		.max_gain = 0,
+		.min_gain = -1500,
+		.max_gain = 1100,
 	},
 	[Q6_HW_SPEAKER] = {
-		.min_gain = -1500,
-		.max_gain = 0,
+		.min_gain = -2000,
+		.max_gain = 800,
 	},
 	[Q6_HW_TTY] = {
-		.min_gain = -2000,
-		.max_gain = 0,
+		.min_gain = -1500,
+		.max_gain = 1100,
 	},
 	[Q6_HW_BT_SCO] = {
 		.min_gain = -2000,
-		.max_gain = 0,
+		.max_gain = 800,
 	},
 	[Q6_HW_BT_A2DP] = {
 		.min_gain = -2000,
-		.max_gain = 0,
+		.max_gain = 800,
 	},
 };
 
@@ -950,9 +951,9 @@ static void _audio_rx_path_enable(int reconf, uint32_t acdb_id)
 	adie_proceed_to_stage(adie, ADIE_PATH_RX, ADIE_STAGE_DIGITAL_READY);
 	adie_proceed_to_stage(adie, ADIE_PATH_RX, ADIE_STAGE_DIGITAL_ANALOG_READY);
 
-	audio_update_acdb(audio_rx_device_id, acdb_id);
 	if (!reconf)
 		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_RX_DEVICE, audio_rx_device_id);
+	audio_update_acdb(audio_rx_device_id, acdb_id);
 	qdsp6_standby(ac_control);
 	qdsp6_start(ac_control);
 
@@ -974,10 +975,9 @@ static void _audio_tx_path_enable(int reconf, uint32_t acdb_id)
 	adie_proceed_to_stage(adie, ADIE_PATH_TX, ADIE_STAGE_DIGITAL_READY);
 	adie_proceed_to_stage(adie, ADIE_PATH_TX, ADIE_STAGE_DIGITAL_ANALOG_READY);
 
-	audio_update_acdb(audio_tx_device_id, acdb_id);
-
 	if (!reconf)
 		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_TX_DEVICE, audio_tx_device_id);
+	audio_update_acdb(audio_tx_device_id, acdb_id);
 	qdsp6_standby(ac_control);
 	qdsp6_start(ac_control);
 
@@ -1235,14 +1235,15 @@ int q6audio_update_acdb(uint32_t id_src, uint32_t id_dst)
 		return 0;
 
 	mutex_lock(&audio_path_lock);
-	res = audio_update_acdb(id_dst, id_src);
-	if (res)
-		goto done;
 
 	if (q6_device_to_dir(id_dst) == Q6_RX)
 		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_RX_DEVICE, id_dst);
 	else
 		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_TX_DEVICE, id_dst);
+	res = audio_update_acdb(id_dst, id_src);
+	if (res)
+		goto done;
+
 	qdsp6_standby(ac_control);
 	qdsp6_start(ac_control);
 done:
@@ -1309,8 +1310,8 @@ static void do_rx_routing(uint32_t device_id, uint32_t acdb_id)
 {
 	if (device_id == audio_rx_device_id) {
 		if (acdb_id != rx_acdb) {
-			audio_update_acdb(device_id, acdb_id);
 			qdsp6_devchg_notify(ac_control, ADSP_AUDIO_RX_DEVICE, device_id);
+			audio_update_acdb(device_id, acdb_id);
 			qdsp6_standby(ac_control);
 			qdsp6_start(ac_control);
 		}
@@ -1323,6 +1324,11 @@ static void do_rx_routing(uint32_t device_id, uint32_t acdb_id)
 		_audio_rx_clk_reinit(device_id);
 		_audio_rx_path_enable(1, acdb_id);
 	} else {
+		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_RX_DEVICE,
+					device_id);
+		audio_update_acdb(device_id, acdb_id);
+		qdsp6_standby(ac_control);
+		qdsp6_start(ac_control);
 		audio_rx_device_id = device_id;
 		audio_rx_path_id = q6_device_to_path(device_id);
 	}
@@ -1332,8 +1338,9 @@ static void do_tx_routing(uint32_t device_id, uint32_t acdb_id)
 {
 	if (device_id == audio_tx_device_id) {
 		if (acdb_id != tx_acdb) {
+			qdsp6_devchg_notify(ac_control, ADSP_AUDIO_TX_DEVICE,
+						device_id);
 			audio_update_acdb(device_id, acdb_id);
-			qdsp6_devchg_notify(ac_control, ADSP_AUDIO_TX_DEVICE, device_id);
 			qdsp6_standby(ac_control);
 			qdsp6_start(ac_control);
 		}
@@ -1346,6 +1353,11 @@ static void do_tx_routing(uint32_t device_id, uint32_t acdb_id)
 		_audio_tx_clk_reinit(device_id);
 		_audio_tx_path_enable(1, acdb_id);
 	} else {
+		qdsp6_devchg_notify(ac_control, ADSP_AUDIO_TX_DEVICE,
+					device_id);
+		audio_update_acdb(device_id, acdb_id);
+		qdsp6_standby(ac_control);
+		qdsp6_start(ac_control);
 		audio_tx_device_id = device_id;
 		audio_tx_path_id = q6_device_to_path(device_id);
 	}
@@ -1572,3 +1584,34 @@ int q6audio_async(struct audio_client *ac)
 	rpc.response_type = ADSP_AUDIO_RESPONSE_ASYNC;
 	return audio_ioctl(ac, &rpc, sizeof(rpc));
 }
+
+struct audio_client *q6fm_open(void)
+{
+	struct audio_client *ac;
+
+	if (q6audio_init())
+		return 0;
+
+/*	if (audio_rx_device_id != ADSP_AUDIO_DEVICE_ID_HEADSET_SPKR_STEREO &&
+	    audio_rx_device_id != ADSP_AUDIO_DEVICE_ID_SPKR_PHONE_MONO)
+		return 0;
+*/
+	ac = audio_client_alloc(0);
+	if (!ac)
+		return 0;
+
+	ac->flags = AUDIO_FLAG_WRITE;
+	audio_rx_path_enable(1, 0);
+	enable_aux_loopback(1);
+
+	return ac;
+}
+
+int q6fm_close(struct audio_client *ac)
+{
+	audio_rx_path_enable(0, 0);
+	enable_aux_loopback(0);
+	audio_client_free(ac);
+	return 0;
+}
+
