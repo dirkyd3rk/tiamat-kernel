@@ -715,7 +715,9 @@ msmsdcc_start_data(struct msmsdcc_host *host, struct mmc_data *data,
 			host->cmd_c = c;
 		}
 		dsb();
-		msm_dmov_enqueue_cmd_ext(host->dma.channel, &host->dma.hdr);
+		msm_dmov_enqueue_cmd(host->dma.channel, &host->dma.hdr);
+		if (data->flags & MMC_DATA_WRITE)
+			host->prog_scan = true;
 	} else {
 		msmsdcc_writel(host, timeout, MMCIDATATIMER);
 
@@ -806,6 +808,10 @@ msmsdcc_pio_read(struct msmsdcc_host *host, char *buffer, unsigned int remain)
 		count += remain;
 	}else
 #endif
+
+	if (remain % 4)
+		remain = ((remain >> 2) + 1) << 2;
+
 	while (msmsdcc_readl(host, MMCISTATUS) & MCI_RXDATAAVLBL) {
 		*ptr = msmsdcc_readl(host, MMCIFIFO + (count % MCI_FIFOSIZE));
 		ptr++;
