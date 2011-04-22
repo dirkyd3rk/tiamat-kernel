@@ -693,7 +693,6 @@ static int __init parse_tag_ps_calibration(const struct tag *tag)
 __tagtable(ATAG_PS, parse_tag_ps_calibration);
 #endif
 
-#ifndef CONFIG_CMDLINE_FORCE
 static int __init parse_tag_cmdline(const struct tag *tag)
 {
 #ifndef CONFIG_CMDLINE_FORCE
