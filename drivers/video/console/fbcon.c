@@ -393,8 +393,7 @@ static void fb_flashcursor(struct work_struct *work)
 		CM_ERASE : CM_DRAW;
 	ops->cursor(vc, info, mode, softback_lines, get_color(vc, info, c, 1),
 		    get_color(vc, info, c, 0));
-	
-	release_console_sem();
+	console_unlock();
 }
 
 static void cursor_timer_handler(unsigned long dev_addr)
