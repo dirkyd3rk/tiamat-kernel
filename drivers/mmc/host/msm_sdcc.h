@@ -244,6 +244,7 @@ struct msmsdcc_host {
 	struct work_struct	resume_task;
 #endif
 
+	struct tasklet_struct	dma_tlet;
 	/* Command parameters */
 	unsigned int		cmd_timeout;
 	unsigned int		cmd_pio_irqmask;
