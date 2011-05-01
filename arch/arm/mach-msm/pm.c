@@ -231,19 +231,19 @@ static void
 msm_pm_enter_prep_hw(void)
 {
 #if defined(CONFIG_ARCH_MSM7X30)
-	writel(1, A11S_PWRDOWN);
-	writel(4, A11S_SECOP);
+  writel(1, A11S_PWRDOWN);
+  writel(4, A11S_SECOP);
 #else
 #if defined(CONFIG_ARCH_QSD8X50)
-	writel(0x1b, A11S_CLK_SLEEP_EN);
+  writel(0x1b, A11S_CLK_SLEEP_EN);
 #else
-	writel(0x1f, A11S_CLK_SLEEP_EN);
+  writel(0x1f, A11S_CLK_SLEEP_EN);
 #endif
-	writel(1, A11S_PWRDOWN);
-	writel(0, A11S_STANDBY_CTL);
+  writel(1, A11S_PWRDOWN);
+  writel(0, A11S_STANDBY_CTL);
 
 #if defined(CONFIG_ARCH_MSM_ARM11)
-	writel(0, A11RAMBACKBIAS);
+  writel(0, A11RAMBACKBIAS);
 #endif
 #endif
 }

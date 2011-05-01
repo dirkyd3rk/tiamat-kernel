@@ -29,7 +29,7 @@
 #include <linux/input.h>
 #include <linux/akm8973.h>
 #include <linux/bma150.h>
-#include <linux/capella_cm3602.h>
+#include <linux/capella_cm3602_htc.h>
 #include <linux/regulator/machine.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -53,7 +53,7 @@
 #include <mach/msm_serial_hs.h>
 #include <mach/bcm_bt_lpm.h>
 #include <mach/tpa6130.h>
-#include <mach/msm_flashlight.h>
+#include "board-supersonic-flashlight.h"
 #include <linux/atmel_qt602240.h>
 #include <mach/vreg.h>
 

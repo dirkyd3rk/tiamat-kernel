@@ -57,7 +57,7 @@ enum {
 	MSM_LCDC_INTERFACE,
 	MSM_TV_INTERFACE,
 
-	MSM_MDP_NUM_INTERFACES = MSM_LCDC_INTERFACE + 1,
+	MSM_MDP_NUM_INTERFACES = MSM_TV_INTERFACE + 1
 };
 
 #define MSMFB_CAP_PARTIAL_UPDATES	(1 << 0)
@@ -294,7 +294,7 @@ struct msm_mddi_bridge_platform_data {
 	int bridge_type;
 	int panel_type;
 	uint32_t caps;
-	/* board file will identify what capabilities the panel supports */
+	/* backlight data */
 	u8 *pwm;
 };
 

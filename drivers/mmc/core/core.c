@@ -323,9 +323,16 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 		unsigned int timeout_us, limit_us;
 
 		timeout_us = data->timeout_ns / 1000;
+<<<<<<< HEAD
 		if ((card->host->ios.clock / 1000) > 0)
 		timeout_us += data->timeout_clks * 1000 /
 			(card->host->ios.clock / 1000);
+=======
+
+		if (mmc_host_clk_rate(card->host))
+			timeout_us += data->timeout_clks * 1000 /
+				(mmc_host_clk_rate(card->host) / 1000);
+>>>>>>> e75298f29b1aba4a744a06ea04314367fc5fa439
 
 		if (data->flags & MMC_DATA_WRITE)
 			/*

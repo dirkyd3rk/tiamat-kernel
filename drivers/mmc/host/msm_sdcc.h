@@ -239,12 +239,10 @@ struct msmsdcc_host {
 	struct early_suspend early_suspend;
 	int polling_enabled;
 #endif
-
+	struct tasklet_struct	dma_tlet;
 #ifdef CONFIG_MMC_MSM7X00A_RESUME_IN_WQ
 	struct work_struct	resume_task;
 #endif
-
-	struct tasklet_struct	dma_tlet;
 	/* Command parameters */
 	unsigned int		cmd_timeout;
 	unsigned int		cmd_pio_irqmask;

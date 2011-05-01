@@ -39,8 +39,10 @@ extern void start_drawing_late_resume(struct early_suspend *h);
 static void msmfb_resume_handler(struct early_suspend *h);
 static void msmfb_resume(struct work_struct *work);
 
+#ifdef CONFIG_MSM_HDMI
 void hdmi_DoBlit(int offset);
 int hdmi_usePanelSync(void);
+#endif
 
 #define MSMFB_DEBUG 1
 #ifdef CONFIG_FB_MSM_LOGO
@@ -121,6 +123,51 @@ struct msmfb_info {
 	ktime_t vsync_request_time;
 	unsigned fb_resumed;
 };
+
+#ifdef CONFIG_FB_MSM_OVERLAY
+#define USE_OVERLAY	1
+struct overlay_waitevent{
+	uint32_t waked_up;
+	wait_queue_head_t event_wait;
+};
+static struct overlay_waitevent overlay_event;
+DEFINE_MUTEX(overlay_event_lock);
+#endif
+
+#if (defined(CONFIG_USB_FUNCTION_PROJECTOR) || defined(CONFIG_USB_ANDROID_PROJECTOR))
+static spinlock_t fb_data_lock = SPIN_LOCK_UNLOCKED;
+static struct msm_fb_info msm_fb_data;
+int msmfb_get_var(struct msm_fb_info *tmp)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&fb_data_lock, flags);
+	memcpy(tmp, &msm_fb_data, sizeof(msm_fb_data));
+	spin_unlock_irqrestore(&fb_data_lock, flags);
+	return 0;
+}
+
+/* projector need this, and very much */
+int msmfb_get_fb_area(void)
+{
+	int area;
+	unsigned long flags;
+	spin_lock_irqsave(&fb_data_lock, flags);
+	area = msm_fb_data.msmfb_area;
+	spin_unlock_irqrestore(&fb_data_lock, flags);
+	return area;
+}
+
+static void msmfb_set_var(unsigned char *addr, int area)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&fb_data_lock, flags);
+	msm_fb_data.fb_addr = addr;
+	msm_fb_data.msmfb_area = area;
+	spin_unlock_irqrestore(&fb_data_lock, flags);
+
+}
+#endif
 
 #ifdef CONFIG_FB_MSM_OVERLAY
 #define USE_OVERLAY	1
@@ -419,6 +466,7 @@ restart:
 		msmfb->yoffset);
 	spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 
+#ifdef CONFIG_MSM_HDMI
     if (!hdmi_usePanelSync())
     {
         msmfb->vsync_request_time = ktime_get();
@@ -426,6 +474,7 @@ restart:
     }
     else
     {
+#endif
         /* if the panel is all the way on wait for vsync, otherwise sleep
          * for 16 ms (long enough for the dma to panel) and then begin dma */
         msmfb->vsync_request_time = ktime_get();
@@ -439,10 +488,13 @@ restart:
                           HRTIMER_MODE_REL);
             }
         }
+#ifdef CONFIG_MSM_HDMI
     }
 
     /* We did the DMA, now blit the data to the other display */
     hdmi_DoBlit(msmfb->xres * msmfb->yoffset * BYTES_PER_PIXEL(msmfb));
+
+#endif
 
     return;
 }

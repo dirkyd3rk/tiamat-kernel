@@ -49,14 +49,6 @@ obj-$(CONFIG_CPU_FREQ) += cpufreq.o
 obj-$(CONFIG_MSM_REMOTE_SPINLOCK) += remote_spinlock.o
 obj-$(CONFIG_MSM_SSBI) += ssbi.o
 
-obj-$(CONFIG_HTC_ACOUSTIC) += htc_acoustic.o
-obj-$(CONFIG_HTC_ACOUSTIC_QSD) += htc_acoustic_qsd.o
-
-obj-$(CONFIG_MACH_TROUT) += board-trout.o devices-msm7x00.o
-obj-$(CONFIG_MACH_TROUT) += board-trout-gpio.o
-obj-$(CONFIG_MACH_TROUT) += board-trout-keypad.o board-trout-panel.o
-obj-$(CONFIG_MACH_TROUT) += htc_akm_cal.o htc_wifi_nvs.o
-obj-$(CONFIG_MACH_TROUT) += board-trout-mmc.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-rfkill.o
 obj-$(CONFIG_MACH_TROUT) += board-trout-wifi.o
 obj-$(CONFIG_MACH_TROUT) += devices_htc.o
@@ -75,7 +67,6 @@ obj-$(CONFIG_MACH_MAHIMAHI) += board-mahimahi-rfkill.o htc_wifi_nvs.o htc_awb_ca
 obj-$(CONFIG_MACH_MAHIMAHI) += board-mahimahi-wifi.o board-mahimahi-audio.o
 obj-$(CONFIG_MACH_MAHIMAHI) += msm_vibrator.o
 obj-$(CONFIG_MACH_MAHIMAHI) += board-mahimahi-microp.o
-obj-$(CONFIG_MACH_MAHIMAHI) += board-mahimahi-flashlight.o
 
 obj-$(CONFIG_MACH_HALIBUT) += board-halibut.o devices-msm7x00.o
 obj-$(CONFIG_MACH_HALIBUT) += board-halibut-keypad.o
@@ -106,22 +97,6 @@ else
 obj-y	+= gpio.o
 endif
 
-obj-$(CONFIG_MACH_MSM7X30_SURF) += board-surf7x30.o
-obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30.o devices-msm7x30.o
-obj-$(CONFIG_ARCH_QSD8X50) += devices-qsd8x50.o
-obj-$(CONFIG_MACH_QSD8X50_SURF) += board-qsd8x50.o
-obj-$(CONFIG_MACH_QSD8X50A_ST1_5) += board-qsd8x50.o
-obj-$(CONFIG_MACH_QSD8X50_FFA) += board-qsd8x50.o
-obj-$(CONFIG_ARCH_MSM8X60) += board-msm8x60.o
-obj-$(CONFIG_MACH_MSM7X30_SURF) += board-surf7x30.o
-obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30.o devices-msm7x30.o
-obj-$(CONFIG_ARCH_MSM7X30) += gpiomux-7x30.o gpiomux-v1.o gpiomux.o
-obj-$(CONFIG_ARCH_QSD8X50) += gpiomux-8x50.o gpiomux-v1.o gpiomux.o
-obj-$(CONFIG_ARCH_MSM8X60) += gpiomux-8x60.o gpiomux-v2.o gpiomux.o
-ifndef CONFIG_MSM_V2_TLMM
-obj-y	+= gpio.o
-endif
-
 obj-$(CONFIG_MACH_SUPERSONIC) += board-supersonic.o board-supersonic-panel.o
 obj-$(CONFIG_MACH_SUPERSONIC) += board-supersonic-keypad.o board-supersonic-mmc.o
 obj-$(CONFIG_MACH_SUPERSONIC) += board-supersonic-rfkill.o board-supersonic-audio.o
@@ -132,6 +107,7 @@ obj-$(CONFIG_MACH_SUPERSONIC) += board-supersonic-tpa2018d1.o
 obj-$(CONFIG_MACH_SUPERSONIC) += board-supersonic-tpa6130.o
 obj-$(CONFIG_MACH_SUPERSONIC) += htc_wifi_nvs.o htc_bluetooth.o
 obj-$(CONFIG_MACH_SUPERSONIC) += htc_acoustic_qsd.o
+obj-$(CONFIG_MACH_SUPERSONIC) += board-supersonic-flashlight.o
 obj-$(CONFIG_HTC_BATTCHG) += htc_battery.o
 
 obj-$(CONFIG_MACH_BRAVO) += board-bravo.o board-bravo-panel.o

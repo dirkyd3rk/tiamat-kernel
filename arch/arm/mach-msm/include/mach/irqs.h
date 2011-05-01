@@ -53,5 +53,4 @@
 
 #define MSM_GPIO_TO_INT(n) (FIRST_GPIO_IRQ + (n))
 #define MSM_INT_TO_REG(base, irq) (base + irq / 32)
-
 #endif

@@ -292,7 +292,7 @@ static void msmsdcc_reset_and_restore(struct msmsdcc_host *host)
 {
 	u32	mci_clk = 0;
 	u32	mci_mask0 = 0;
-	int	ret = 0;
+	int ret;
 
 	/* Save the controller state */
 	mci_clk = readl(host->base + MMCICLOCK);
@@ -320,7 +320,9 @@ static void msmsdcc_reset_and_restore(struct msmsdcc_host *host)
 				mmc_hostname(host->mmc), host->clk_rate, ret);
 }
 
-void msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
+
+void
+msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 {
 	BUG_ON(host->curr.data);
 
@@ -715,9 +717,10 @@ msmsdcc_start_data(struct msmsdcc_host *host, struct mmc_data *data,
 			host->cmd_c = c;
 		}
 		dsb();
-		msm_dmov_enqueue_cmd(host->dma.channel, &host->dma.hdr);
+		msm_dmov_enqueue_cmd_ext(host->dma.channel, &host->dma.hdr);
 		if (data->flags & MMC_DATA_WRITE)
 			host->prog_scan = true;
+
 	} else {
 		msmsdcc_writel(host, timeout, MMCIDATATIMER);
 
@@ -797,7 +800,6 @@ msmsdcc_pio_read(struct msmsdcc_host *host, char *buffer, unsigned int remain)
 	uint32_t	*ptr = (uint32_t *) buffer;
 	int		count = 0;
 
-
 #ifdef CONFIG_WIMAX
 	unsigned int val = 0; //For 2 bytes data access and consider normal 4 bytes SDIO alignment
 
@@ -808,9 +810,6 @@ msmsdcc_pio_read(struct msmsdcc_host *host, char *buffer, unsigned int remain)
 		count += remain;
 	}else
 #endif
-
-	if (remain % 4)
-		remain = ((remain >> 2) + 1) << 2;
 
 	while (msmsdcc_readl(host, MMCISTATUS) & MCI_RXDATAAVLBL) {
 		*ptr = msmsdcc_readl(host, MMCIFIFO + (count % MCI_FIFOSIZE));
@@ -1129,7 +1128,6 @@ msmsdcc_irq(int irq, void *dev_id)
 #if IRQ_DEBUG
 		msmsdcc_print_status(host, "irq0-r", status);
 #endif
-
 		status &= (msmsdcc_readl(host, MMCIMASK0) |
 					      MCI_DATABLOCKENDMASK);
 		msmsdcc_writel(host, status, MMCICLEAR);
@@ -1528,7 +1526,8 @@ msmsdcc_probe(struct platform_device *pdev)
 					   plat->embedded_sdio->funcs,
 					   plat->embedded_sdio->num_funcs);
 #endif
-
+	tasklet_init(&host->dma_tlet, msmsdcc_dma_complete_tlet,
+			(unsigned long)host);
 	/*
 	 * Setup DMA
 	 */
