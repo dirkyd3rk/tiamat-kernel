@@ -615,11 +615,6 @@ static void retrigger_next_event(void *arg)
 	if (!hrtimer_hres_active())
 		return;
 
-	do {
-		seq = read_seqbegin(&xtime_lock);
-		wtm = __get_wall_to_monotonic();
-	} while (read_seqretry(&xtime_lock, seq));
-
 	get_xtime_and_monotonic_and_sleep_offset(&realtime_offset, &wtm,
 							&sleep);
 	set_normalized_timespec(&realtime_offset, -wtm.tv_sec, -wtm.tv_nsec);
