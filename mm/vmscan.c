@@ -37,6 +37,7 @@
 #include <linux/rwsem.h>
 #include <linux/delay.h>
 #include <linux/kthread.h>
+#include <linux/timer.h>
 #include <linux/freezer.h>
 #include <linux/memcontrol.h>
 #include <linux/delayacct.h>
@@ -147,7 +148,7 @@ struct scan_control {
 /*
  * From 0 .. 100.  Higher means more swappy.
  */
-int vm_swappiness = 60;
+int vm_swappiness;
 long vm_total_pages;	/* The total number of pages which the VM controls */
 
 static LIST_HEAD(shrinker_list);
@@ -652,6 +653,17 @@ static enum page_references page_check_references(struct page *page,
 	if (referenced_ptes) {
 		if (PageAnon(page))
 			return PAGEREF_ACTIVATE;
+
+		/*
+		 * Identify referenced, file-backed active pages and move them
+		 * to the active list. We know that this page has been
+		 * referenced since being put on the inactive list. VM_EXEC
+		 * pages are only moved to the inactive list when they have not
+		 * been referenced between scans (see shrink_active_list).
+		 */
+		if ((vm_flags & VM_EXEC) && page_is_file_cache(page))
+			return PAGEREF_ACTIVATE;
+
 		/*
 		 * All mapped pages start out with page table
 		 * references from the instantiating fault, so we need
@@ -1944,6 +1956,35 @@ restart:
 }
 
 /*
+ * Helper functions to adjust nice level of kswapd, based on the priority of
+ * the task (p) that called it. If it is already higher priority we do not
+ * demote its nice level since it is still working on behalf of a higher
+ * priority task. With kernel threads we leave it at nice 0.
+ *
+ * We don't ever run kswapd real time, so if a real time task calls kswapd we
+ * set it to highest SCHED_NORMAL priority.
+ */
+static inline int effective_sc_prio(struct task_struct *p)
+{
+	if (likely(p->mm)) {
+		if (rt_task(p))
+			return -20;
+		if (p->policy == SCHED_IDLEPRIO)
+			return 19;
+		return task_nice(p);
+	}
+	return 0;
+}
+
+static void set_kswapd_nice(struct task_struct *kswapd, int active)
+{
+	long nice = effective_sc_prio(current);
+
+	if (task_nice(kswapd) > nice || !active)
+		set_user_nice(kswapd, nice);
+}
+
+/*
  * This is the direct reclaim path, for page-allocating processes.  We only
  * try to reclaim pages from zones which will satisfy the caller's allocation
  * request.
@@ -2606,6 +2647,8 @@ static void kswapd_try_to_sleep(pg_data_t *pgdat, int order, int classzone_idx)
 	finish_wait(&pgdat->kswapd_wait, &wait);
 }
 
+#define WT_EXPIRY	(HZ * 5)	/* Time to wakeup watermark_timer */
+
 /*
  * The background pageout daemon, started as a kernel thread
  * from the init process.
@@ -2659,6 +2702,8 @@ static int kswapd(void *p)
 		int new_classzone_idx;
 		int ret;
 
+		/* kswapd has been busy so delay watermark_timer */
+		mod_timer(&pgdat->watermark_timer, jiffies + WT_EXPIRY);
 		new_order = pgdat->kswapd_max_order;
 		new_classzone_idx = pgdat->classzone_idx;
 		pgdat->kswapd_max_order = 0;
@@ -2700,6 +2745,7 @@ static int kswapd(void *p)
 void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
 {
 	pg_data_t *pgdat;
+	int active;
 
 	if (!populated_zone(zone))
 		return;
@@ -2711,7 +2757,9 @@ void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
 		pgdat->kswapd_max_order = order;
 		pgdat->classzone_idx = min(pgdat->classzone_idx, classzone_idx);
 	}
-	if (!waitqueue_active(&pgdat->kswapd_wait))
+	active = waitqueue_active(&pgdat->kswapd_wait);
+	set_kswapd_nice(pgdat->kswapd, active);
+	if (!active)
 		return;
 	if (zone_watermark_ok_safe(zone, order, low_wmark_pages(zone), 0, 0))
 		return;
@@ -2821,20 +2869,57 @@ static int __devinit cpu_callback(struct notifier_block *nfb,
 }
 
 /*
+ * We wake up kswapd every WT_EXPIRY till free ram is above pages_lots
+ */
+static void watermark_wakeup(unsigned long data)
+{
+	pg_data_t *pgdat = (pg_data_t *)data;
+	struct timer_list *wt = &pgdat->watermark_timer;
+	int i;
+
+	if (!waitqueue_active(&pgdat->kswapd_wait) || above_background_load())
+		goto out;
+	for (i = pgdat->nr_zones - 1; i >= 0; i--) {
+		struct zone *z = pgdat->node_zones + i;
+
+		if (!populated_zone(z) || is_highmem(z)) {
+			/* We are better off leaving highmem full */
+			continue;
+		}
+		if (!zone_watermark_ok(z, 0, lots_wmark_pages(z), 0, 0)) {
+			wake_up_interruptible(&pgdat->kswapd_wait);
+			goto out;
+		}
+	}
+out:
+	mod_timer(wt, jiffies + WT_EXPIRY);
+	return;
+}
+
+/*
  * This kswapd start function will be called by init and node-hot-add.
  * On node-hot-add, kswapd will moved to proper cpus if cpus are hot-added.
  */
 int kswapd_run(int nid)
 {
 	pg_data_t *pgdat = NODE_DATA(nid);
+	struct timer_list *wt;
 	int ret = 0;
 
 	if (pgdat->kswapd)
 		return 0;
 
+	wt = &pgdat->watermark_timer;
+	init_timer(wt);
+	wt->data = (unsigned long)pgdat;
+	wt->function = watermark_wakeup;
+	wt->expires = jiffies + WT_EXPIRY;
+	add_timer(wt);
+
 	pgdat->kswapd = kthread_run(kswapd, pgdat, "kswapd%d", nid);
 	if (IS_ERR(pgdat->kswapd)) {
 		/* failure at boot is fatal */
+		del_timer(wt);
 		BUG_ON(system_state == SYSTEM_BOOTING);
 		printk("Failed to start kswapd on node %d\n",nid);
 		ret = -1;

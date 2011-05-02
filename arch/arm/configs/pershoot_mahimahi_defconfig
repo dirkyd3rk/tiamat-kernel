@@ -1,7 +1,11 @@
 #
 # Automatically generated make config: don't edit
 # Linux/arm 2.6.38.4 Kernel Configuration
+<<<<<<< HEAD
 # Sat Apr 30 14:28:33 2011
+=======
+# Thu Apr 21 22:04:06 2011
+>>>>>>> e49521e6c01ed95c8cb37934eef80183f802abdd
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y

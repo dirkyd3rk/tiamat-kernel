@@ -39,6 +39,7 @@
 #define SCHED_BATCH		3
 /* SCHED_ISO: reserved but not implemented yet */
 #define SCHED_IDLE		5
+#define SCHED_IDLEPRIO		SCHED_IDLE
 /* Can be ORed in to make sure the process is reverted back to SCHED_NORMAL on fork */
 #define SCHED_RESET_ON_FORK     0x40000000
 
@@ -1533,6 +1534,12 @@ struct task_struct {
 #endif
 };
 
+/* Anyone feel like implementing this? */
+static inline int above_background_load(void)
+{
+	return 1;
+}
+
 /* Future-safe accessor for struct task_struct's cpus_allowed. */
 #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
 
@@ -2055,7 +2062,7 @@ extern void release_uids(struct user_namespace *ns);
 
 #include <asm/current.h>
 
-extern void do_timer(unsigned long ticks);
+extern void xtime_update(unsigned long ticks);
 
 extern int wake_up_state(struct task_struct *tsk, unsigned int state);
 extern int wake_up_process(struct task_struct *tsk);

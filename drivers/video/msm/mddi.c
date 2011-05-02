@@ -103,6 +103,8 @@ struct mddi_info {
 	char client_name[20];
 
 	struct platform_device client_pdev;
+	struct resource client_vsync_res;
+
 	unsigned type;
 	char debugfs_buf[32];
 };

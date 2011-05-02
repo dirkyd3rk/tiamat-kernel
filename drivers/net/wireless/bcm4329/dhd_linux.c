@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_linux.c,v 1.65.4.9.2.12.2.104.4.40 2011/02/03 19:55:18 Exp $
+ * $Id: dhd_linux.c,v 1.65.4.9.2.12.2.104.4.35 2010/11/17 03:13:21 Exp $
  */
 
 #ifdef CONFIG_WIFI_CONTROL_FUNC
@@ -544,7 +544,7 @@ static void dhd_set_packet_filter(int value, dhd_pub_t *dhd)
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 {
-	int power_mode = PM_FAST;
+	int power_mode = PM_MAX;
 	/* wl_pkt_filter_enable_t	enable_parm; */
 	char iovbuf[32];
 	int bcn_li_dtim = 3;
@@ -779,13 +779,13 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 	ASSERT(dhd && dhd->iflist[ifidx]);
 	dev = dhd->iflist[ifidx]->net;
 
-	NETIF_ADDR_LOCK(dev);
+	netif_addr_lock_bh(dev);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)
 	cnt = netdev_mc_count(dev);
 #else
 	cnt = dev->mc_count;
 #endif
-	NETIF_ADDR_UNLOCK(dev);
+	netif_addr_unlock_bh(dev);
 
 	/* Determine initial value of allmulti flag */
 	allmulti = (dev->flags & IFF_ALLMULTI) ? TRUE : FALSE;
@@ -805,7 +805,7 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 	memcpy(bufp, &cnt, sizeof(cnt));
 	bufp += sizeof(cnt);
 
-	NETIF_ADDR_LOCK(dev);
+	netif_addr_lock_bh(dev);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)
 	netdev_for_each_mc_addr(ha, dev) {
 		if (!cnt)
@@ -815,12 +815,12 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 		cnt--;
 	}
 #else
-	for (mclist = dev->mc_list; (mclist && (cnt > 0)); cnt--, mclist = mclist->next) {
+	for (mclist = dev->mc_list;(mclist && (cnt > 0)); cnt--, mclist = mclist->next) {
 		memcpy(bufp, (void *)mclist->dmi_addr, ETHER_ADDR_LEN);
 		bufp += ETHER_ADDR_LEN;
 	}
 #endif
-	NETIF_ADDR_UNLOCK(dev);
+	netif_addr_unlock_bh(dev);
 
 	memset(&ioc, 0, sizeof(ioc));
 	ioc.cmd = WLC_SET_VAR;
@@ -1920,7 +1920,7 @@ dhd_open(struct net_device *net)
 	ifidx = dhd_net2idx(dhd, net);
 	DHD_TRACE(("%s: ifidx %d\n", __FUNCTION__, ifidx));
 
-	if ((dhd->iflist[ifidx]) && (dhd->iflist[ifidx]->state == WLC_E_IF_DEL)) {
+	if (ifidx >= 0 && (dhd->iflist[ifidx]) && (dhd->iflist[ifidx]->state == WLC_E_IF_DEL)) {
 		DHD_ERROR(("%s: Error: called when IF already deleted\n", __FUNCTION__));
 		return -1;
 	}
@@ -3109,12 +3109,11 @@ dhd_dev_pno_enable(struct net_device *dev,  int pfn_enabled)
 
 /* Linux wrapper to call common dhd_pno_set */
 int
-dhd_dev_pno_set(struct net_device *dev, wlc_ssid_t* ssids_local, int nssid,
-		ushort scan_fr, int pno_repeat, int pno_freq_expo_max)
+dhd_dev_pno_set(struct net_device *dev, wlc_ssid_t* ssids_local, int nssid, ushort  scan_fr)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
-	return (dhd_pno_set(&dhd->pub, ssids_local, nssid, scan_fr, pno_repeat, pno_freq_expo_max));
+	return (dhd_pno_set(&dhd->pub, ssids_local, nssid, scan_fr));
 }
 
 /* Linux wrapper to get  pno status */
@@ -3142,20 +3141,20 @@ int net_os_send_hang_message(struct net_device *dev)
 	return ret;
 }
 
-void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec)
+void dhd_bus_country_set(struct net_device *dev, char *country_code)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	if (dhd && dhd->pub.up)
-		memcpy(&dhd->pub.dhd_cspec, cspec, sizeof(wl_country_t));
+		strncpy(dhd->pub.country_code, country_code, WLC_CNTRY_BUF_SZ);
 }
 
 char *dhd_bus_country_get(struct net_device *dev)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
-	if (dhd && (dhd->pub.dhd_cspec.ccode[0] != 0))
-		return dhd->pub.dhd_cspec.ccode;
+	if (dhd && (dhd->pub.country_code[0] != 0))
+		return dhd->pub.country_code;
 	return NULL;
 }
 
